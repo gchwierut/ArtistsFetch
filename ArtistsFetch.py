@@ -52,32 +52,32 @@ for album_id in sorted_album_ids:
         track_ids.extend([track["id"] for track in tracks])
 
 # Check if playlist already exists
-playlist_name = f"{artist_name} Complete Spotify Discography"
-playlists = sp.current_user_playlists()
-playlist_exists = False
-for playlist in playlists["items"]:
-    if playlist["name"] == playlist_name:
-        playlist_id = playlist["id"]
-        playlist_exists = True
+playlist_name = f"{artist_name} Top Tracks"
+existing_playlists = sp.current_user_playlists()["items"]
+playlist_id = None
+
+for existing_playlist in existing_playlists:
+    if existing_playlist["name"] == playlist_name:
+        playlist_id = existing_playlist["id"]
         break
 
-# Create playlist if it does not exist
-if not playlist_exists:
+# If playlist does not exist, create a new one
+if playlist_id is None:
     playlist = sp.user_playlist_create(sp.current_user()["id"], playlist_name, public=True)
     playlist_id = playlist["id"]
 
-# Get all track IDs from the playlist
-playlist_tracks = []
-offset = 0
+# Get existing track IDs in the playlist
+existing_track_ids = []
+existing_tracks = sp.playlist_tracks(playlist_id)["items"]
 while True:
-    tracks = sp.playlist_tracks(playlist_id, offset=offset)["items"]
-    if len(tracks) == 0:
+    for track in existing_tracks:
+        existing_track_ids.append(track["track"]["id"])
+    if len(existing_tracks) == 0:
         break
-    playlist_tracks.extend([track["track"]["id"] for track in tracks])
-    offset += len(tracks)
+    existing_tracks = sp.playlist_tracks(playlist_id, offset=len(existing_track_ids))["items"]
 
-# Add missing tracks to the playlist in chunks of 100
-missing_track_ids = list(set(track_ids) - set(playlist_tracks))
+# Add missing tracks in the right order
+missing_track_ids = [track_id for track_id in track_ids if track_id not in existing_track_ids]
 for i in range(0, len(missing_track_ids), 100):
     sp.playlist_add_items(playlist_id, missing_track_ids[i:i+100])
     time.sleep(1)
