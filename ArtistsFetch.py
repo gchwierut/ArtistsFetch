@@ -53,22 +53,31 @@ for album_id in sorted_album_ids:
 
 # Check if playlist already exists
 playlist_name = f"{artist_name} Complete Spotify Discography"
-existing_playlists = sp.current_user_playlists()
-for playlist in existing_playlists["items"]:
+playlists = sp.current_user_playlists()
+playlist_exists = False
+for playlist in playlists["items"]:
     if playlist["name"] == playlist_name:
-        existing_playlist_id = playlist["id"]
-        existing_track_ids = []
-        existing_tracks = sp.playlist_tracks(existing_playlist_id)["items"]
-        existing_track_ids.extend([track["track"]["id"] for track in existing_tracks])
-        # Check for missing tracks and add them to the playlist
-        missing_track_ids = list(set(track_ids) - set(existing_track_ids))
-        if len(missing_track_ids) > 0:
-            sp.playlist_add_items(existing_playlist_id, missing_track_ids)
-        print(f"Playlist '{playlist_name}' already exists.")
-        exit()
+        playlist_id = playlist["id"]
+        playlist_exists = True
+        break
 
-# Create a new playlist and add tracks to it in chunks of 100
-playlist = sp.user_playlist_create(sp.current_user()["id"], playlist_name, public=True)
-for i in range(0, len(track_ids), 100):
-    sp.playlist_add_items(playlist["id"], track_ids[i:i+100])
+# Create playlist if it does not exist
+if not playlist_exists:
+    playlist = sp.user_playlist_create(sp.current_user()["id"], playlist_name, public=True)
+    playlist_id = playlist["id"]
+
+# Get all track IDs from the playlist
+playlist_tracks = []
+offset = 0
+while True:
+    tracks = sp.playlist_tracks(playlist_id, offset=offset)["items"]
+    if len(tracks) == 0:
+        break
+    playlist_tracks.extend([track["track"]["id"] for track in tracks])
+    offset += len(tracks)
+
+# Add missing tracks to the playlist in chunks of 100
+missing_track_ids = list(set(track_ids) - set(playlist_tracks))
+for i in range(0, len(missing_track_ids), 100):
+    sp.playlist_add_items(playlist_id, missing_track_ids[i:i+100])
     time.sleep(1)
