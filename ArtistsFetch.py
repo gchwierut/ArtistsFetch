@@ -52,7 +52,7 @@ for album_id in sorted_album_ids:
         track_ids.extend([track["id"] for track in tracks])
 
 # Check if playlist already exists
-playlist_name = f"{artist_name} Top Tracks"
+playlist_name = f"{artist_name} Spotify Discography"
 existing_playlists = sp.current_user_playlists()["items"]
 playlist_id = None
 
